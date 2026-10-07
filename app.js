@@ -46,6 +46,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 展示当前数据之后至 2042 年的全部节气月柱与五行属性，不虚构未来价格。
   const futureSolarTerms = data.futureSolarTerms || []; $('#solar-term-forecast-count').textContent = `${futureSolarTerms.length} 个节气`; $('#solar-term-forecast-table').innerHTML = futureSolarTerms.map((term) => `<tr><td>${term.date} 周${weekday(term.date)}</td><td>${term.time}</td><td>${term.solarTerm}</td><td>${term.monthPillar}</td><td>${term.monthGan} · ${term.monthGanElement}</td><td>${term.monthZhi} · ${term.monthBranchElement}</td><td>${term.elementLabel}</td></tr>`).join('');
 
+  // 历史节气页按年份筛选，保留每年 24 个节气的完整月柱记录。
+  const historicalTerms = data.historicalSolarTerms || [];
+  const historicalYearSelect = $('#historical-term-year');
+  const historicalTermsTable = $('#historical-terms-table');
+  const historicalYears = [...new Set(historicalTerms.map((term) => String(term.year)))].sort();
+  historicalYearSelect.innerHTML = ['全部年份', ...historicalYears].map((year) => `<option value="${year === '全部年份' ? 'all' : year}">${year}</option>`).join('');
+  function renderHistoricalTerms(year = 'all') {
+    const rows = year === 'all' ? historicalTerms : historicalTerms.filter((term) => String(term.year) === year);
+    historicalTermsTable.innerHTML = rows.map((term) => `<tr><td>${term.date}</td><td>${term.time}</td><td>${term.solarTerm}</td><td class="pillar-emphasis">${term.monthPillar}</td><td>${term.monthGan} · ${term.monthGanElement}</td><td>${term.monthZhi} · ${term.monthBranchElement}</td><td>${term.elementLabel}</td></tr>`).join('');
+  }
+  renderHistoricalTerms();
+  historicalYearSelect.addEventListener('change', () => renderHistoricalTerms(historicalYearSelect.value));
+
   const sections = $$('[data-section]'); const navLinks = $$('[data-nav]'); const observer = new IntersectionObserver((entries) => { const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0]; if (!visible) return; navLinks.forEach((link) => link.classList.toggle('active', link.dataset.nav === visible.target.dataset.section)); }, { rootMargin: '-18% 0px -67% 0px', threshold: [0,.2,.5] }); sections.forEach((section) => observer.observe(section));
   const themeToggle = $('#theme-toggle'); if (localStorage.getItem('btc-energy-theme') === 'dark') document.body.classList.add('dark'); themeToggle.addEventListener('click', () => { document.body.classList.toggle('dark'); localStorage.setItem('btc-energy-theme', document.body.classList.contains('dark') ? 'dark' : 'light'); renderHeroChart(); renderPriceChart(document.querySelector('[data-window].active')?.dataset.window || '90'); showToast(document.body.classList.contains('dark') ? '已切换深色模式' : '已切换浅色模式'); });
 });

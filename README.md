@@ -11,6 +11,7 @@
 - **土属性红色标记**：日干或日支为土的日期统一红色标识；2025-10-11 癸丑、2025-10-17 己未额外显示 `📌` 低点关注。
 - **金水日回测**：对比全样本、金水日、金水双强日的上涨率、平均回报和中位数。
 - **丁酉月周期**：展示 2011、2016、2021、2026 已覆盖样本，以及 2031、2036、2041 的未来节气窗口。
+- **历史节气与五行月柱**：提供独立页面 [`historical-terms.html`](https://steven-air.github.io/bithuang-jinshui/historical-terms.html)，按年份查看 2018—2026 年 216 条节气记录；主研究页也保留同一张表。
 - **未来节气五行**：单列当前日期后至 2042 年底的全部节气，展示北京时间、节气月柱、月干五行与月支五行；未来日期不填充价格。
 - **方法与来源**：公开 CSV、`lunar-javascript` API 链路和本地重建命令。
 
@@ -32,9 +33,11 @@ python -m http.server 4174
 - 日干或日支包含金 / 水时标记为金水日；同时保留 0、1、2 级强度；
 - 日干或日支为土时标记为土属性日，红色显示；金水日跌幅在 1% 内额外归为“中性偏弱”；
 - `npm run fetch:ohlc` 从 Yahoo Finance BTC-USD 日线更新最高 / 最低 / 收盘字段；
+- `npm run sync:data` 先拉取 Btbjb 收盘 CSV，再使用公开 Yahoo Finance Chart API 补齐 CSV 尚未覆盖的昨天及最新日线；主 CSV 暂时不可用时保留本地快照并继续补齐。
 - 相邻收盘价的日回报、上涨率、平均值和中位数；
 - 2010-01-01 至 2042-12-31 的丁酉月节气日期窗口。
 - 当前日期后至 2042-12-31 的节气精确时刻与节气月柱五行表。
+- 2018-01-01 至 2026-12-31 的完整节气精确时刻与节气月柱五行表（每年 24 条）。
 
 运行脚本会覆盖 `data/analysis.json`。原始 CSV 不会被修改。
 
@@ -43,6 +46,17 @@ python -m http.server 4174
 仓库已配置 `.github/workflows/pages.yml`：推送到 `main` 后会自动发布静态站点，页面没有构建步骤，`data/analysis.json` 是静态数据层。
 
 公开地址：<https://steven-air.github.io/bithuang-jinshui/>
+
+历史节气专页：<https://steven-air.github.io/bithuang-jinshui/historical-terms.html>
+
+自动同步：GitHub Actions 每天 UTC 02:17 执行 `.github/workflows/sync-data.yml`；手动同步可在该工作流点击 **Run workflow**。本地同步后提交：
+
+```powershell
+npm run sync:data
+git add data
+git commit -m "同步 BTC 价格与五行分析"
+git push
+```
 
 ## 口径说明
 

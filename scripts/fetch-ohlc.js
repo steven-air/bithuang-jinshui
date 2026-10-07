@@ -1,7 +1,10 @@
 // 拉取 Yahoo Finance 的 BTC-USD 日线 OHLC，作为日历高低点的独立价格来源。
 import fs from 'node:fs';
 
-const url = 'https://query1.finance.yahoo.com/v8/finance/chart/BTC-USD?period1=1409462400&period2=1791580800&interval=1d&events=history';
+// 结束时间动态取当前 UTC 日期，避免脚本在 2026-10-07 后停止更新。
+const period1 = Math.floor(Date.UTC(2014, 8, 1) / 1000);
+const period2 = Math.floor(Date.now() / 1000) + 86400;
+const url = `https://query1.finance.yahoo.com/v8/finance/chart/BTC-USD?period1=${period1}&period2=${period2}&interval=1d&events=history`;
 const response = await fetch(url);
 if (!response.ok) throw new Error(`Yahoo Finance HTTP ${response.status}`);
 const payload = await response.json();

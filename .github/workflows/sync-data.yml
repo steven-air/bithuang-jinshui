@@ -1,0 +1,46 @@
+name: 同步 BTC 价格与五行数据
+
+on:
+  # 每天自动同步一次；GitHub Actions 的 cron 使用 UTC。
+  schedule:
+    - cron: '17 2 * * *'
+  # 也可在 Actions 页面点击 Run workflow 手动同步。
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: btc-data-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync prices and rebuild analysis
+        run: npm run sync:data
+
+      - name: Commit updated data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "没有新的价格或分析数据"
+            exit 0
+          fi
+          git add data
+          git commit -m "自动同步 BTC 价格与五行分析"
+          git push

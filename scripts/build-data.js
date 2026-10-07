@@ -8,6 +8,7 @@ const root = path.resolve(__dirname, '..');
 const csvPath = path.join(root, 'data', 'btc_daily.csv');
 const ohlcPath = path.join(root, 'data', 'btc_ohlc.csv');
 const outputPath = path.join(root, 'data', 'analysis.json');
+const syncMetaPath = path.join(root, 'data', 'sync-meta.json');
 const raw = fs.readFileSync(csvPath, 'utf8').replace(/^\uFEFF/, '').trim();
 const rows = raw.split(/\r?\n/).slice(1).map((line) => {
   const [date, price] = line.split(',');
@@ -118,6 +119,7 @@ function enrich(row, previous) {
 }
 
 const daily = rows.map((row, index) => enrich(row, rows[index - 1]));
+const dailyByDate = new Map(daily.map((row) => [row.date, row]));
 const numericReturns = (items) => items.map((item) => item.returnPct).filter((value) => Number.isFinite(value));
 const average = (values) => values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
 const median = (values) => {
@@ -227,7 +229,19 @@ const dingYouMonths = findDingYouMonths('2010-01-01', '2042-12-31');
 const historicalDingYou = dingYouMonths.filter((month) => month.firstPrice !== null);
 const latest = daily.at(-1);
 const recent = daily.slice(-90);
-const futureSolarTerms = collectSolarTermForecast('2026-10-08', '2042-12-31');
+const latestMonth = latest.date.slice(0, 7);
+const monthStart = `${latestMonth}-01`;
+const monthEndDate = new Date(`${monthStart}T00:00:00Z`);
+monthEndDate.setUTCMonth(monthEndDate.getUTCMonth() + 1, 0);
+const monthEnd = monthEndDate.toISOString().slice(0, 10);
+// 为最新月份补齐整月五行日期；尚未发布价格的日期保留价格为空，但照常计算日柱与月柱。
+const monthCalendar = localDateRange(monthStart, monthEnd).map((date) => dailyByDate.get(date) ?? enrich({ date, price: null }, null));
+const nextDate = new Date(`${latest.date}T00:00:00Z`);
+nextDate.setUTCDate(nextDate.getUTCDate() + 1);
+const futureSolarTerms = collectSolarTermForecast(nextDate.toISOString().slice(0, 10), '2042-12-31');
+// 固定生成 2018—2026 年完整节气历史，页面可按年份筛选并复核月柱切换。
+const historicalSolarTerms = collectSolarTermForecast('2018-01-01', '2026-12-31');
+const syncMeta = fs.existsSync(syncMetaPath) ? JSON.parse(fs.readFileSync(syncMetaPath, 'utf8')) : {};
 
 const output = {
   meta: {
@@ -238,7 +252,12 @@ const output = {
     timezone: 'UTC 日线；农历换算按公历日期，不含时柱；OHLC 仅在独立来源覆盖日期提供',
     latestDate: latest.date,
     latestPrice: latest.price,
-    rowCount: daily.length
+    rowCount: daily.length,
+    calendarMonth: latestMonth,
+    syncedAt: syncMeta.syncedAt ?? null,
+    latestCloseDate: syncMeta.latestCloseDate ?? latest.date,
+    latestOhlcDate: syncMeta.latestOhlcDate ?? null,
+    addedCloseRows: syncMeta.addedCloseRows ?? 0
   },
   latest,
   recent,
@@ -255,6 +274,9 @@ const output = {
     historicalStats: stats(historicalDingYou.filter((month) => month.returnPct !== null).map((month) => ({ price: month.lastPrice, returnPct: month.returnPct }))),
     future: dingYouMonths.filter((month) => month.start > latest.date)
   },
+  calendarMonth: latestMonth,
+  monthCalendar,
+  historicalSolarTerms,
   futureSolarTerms,
   halvingWindows: [
     { label: '2028 减半周期', anchor: '2028-04-12', window: '2028–2032', note: '日期为源站预计值，区块高度变化会导致实际日期漂移。' },
