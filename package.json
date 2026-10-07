@@ -1,0 +1,13 @@
+{
+  "name": "btc-bazi-cycle-research",
+  "private": true,
+  "version": "1.0.0",
+  "description": "BTC price, lunar calendar and Bazi energy research dashboard",
+  "scripts": {
+    "fetch:ohlc": "node scripts/fetch-ohlc.js",
+    "build:data": "node scripts/build-data.js"
+  },
+  "dependencies": {
+    "lunar-javascript": "^1.7.7"
+  }
+}
