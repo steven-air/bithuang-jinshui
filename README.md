@@ -17,12 +17,12 @@
 ## 本地运行
 
 ```powershell
-cd bithuang-reading
+cd jinshui-reading
 node scripts/build-data.js
-python -m http.server 4173
+python -m http.server 4174
 ```
 
-然后打开 <http://localhost:4173>。直接双击 `index.html` 可能被浏览器的本地文件策略拦截 `fetch`，建议使用静态服务器。
+然后打开 <http://localhost:4174>。直接双击 `index.html` 可能被浏览器的本地文件策略拦截 `fetch`，建议使用静态服务器。
 
 ## 数据重建
 
@@ -42,7 +42,7 @@ python -m http.server 4173
 
 仓库已配置 `.github/workflows/pages.yml`：推送到 `main` 后会自动发布静态站点，页面没有构建步骤，`data/analysis.json` 是静态数据层。
 
-公开地址：<https://steven-air.github.io/bithuang-reading/>
+公开地址：<https://steven-air.github.io/bithuang-jinshui/>
 
 ## 口径说明
 
