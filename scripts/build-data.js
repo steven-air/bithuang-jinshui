@@ -5,7 +5,14 @@ const path = require('node:path');
 const { Solar } = require('lunar-javascript');
 
 const root = path.resolve(__dirname, '..');
-const csvPath = path.join(root, 'data', 'btc_daily.csv');
+// 本地开发优先参考用户提供的 CSV；部署或自动构建时回退到仓库内副本。
+const priceCsvCandidates = [
+  process.env.BTC_DAILY_CSV,
+  'D:\\download\\btc_daily.csv',
+  path.join(root, 'data', 'btc_daily.csv')
+].filter(Boolean);
+const csvPath = priceCsvCandidates.find((candidate) => fs.existsSync(candidate));
+if (!csvPath) throw new Error('找不到 BTC 日线 CSV，请设置 BTC_DAILY_CSV 或提供 data/btc_daily.csv');
 const ohlcPath = path.join(root, 'data', 'btc_ohlc.csv');
 const outputPath = path.join(root, 'data', 'analysis.json');
 const syncMetaPath = path.join(root, 'data', 'sync-meta.json');
@@ -13,9 +20,13 @@ const lunarCalendarDir = path.join(root, 'data', 'lunar-calendar');
 const raw = fs.readFileSync(csvPath, 'utf8').replace(/^\uFEFF/, '').trim();
 const rows = raw.split(/\r?\n/).slice(1).map((line) => {
   const [date, price] = line.split(',');
+  if (!date || !price) return null;
   const [day, month, year] = date.split('/').map(Number);
+  if (![day, month, year].every(Number.isFinite)) return null;
   return { date: `${year.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`, price: Number(price) };
-}).filter((row) => row.date && Number.isFinite(row.price));
+}).filter((row) => row?.date && Number.isFinite(row.price)).sort((left, right) => left.date.localeCompare(right.date));
+const priceByDate = new Map(rows.map((row) => [row.date, row]));
+const previousPriceByDate = new Map(rows.map((row, index) => [row.date, rows[index - 1]?.price ?? null]));
 
 // OHLC 独立来源只覆盖 2014 年以后；早期样本保留为空，避免把收盘价伪装成高低点。
 const ohlc = new Map();
@@ -38,6 +49,11 @@ const lowPointPins = new Map([
   ['2025-10-17', '己未日土属性，低点关注']
 ]);
 const highlightedFestivals = new Set(['中秋节', '国庆节', '春节', '圣诞节']);
+// 日历只保留主要节日，过滤库内的纪念日、国际日和其他扩展节日。
+const calendarFestivalNames = new Set([
+  '元旦节', '除夕', '春节', '元宵节', '清明节', '端午节', '七夕节',
+  '中元节', '中秋节', '重阳节', '国庆节', '劳动节', '圣诞节'
+]);
 // lunar-javascript 的部分版本把冬至键名返回为英文内部标识，这里统一成页面展示用中文。
 const solarTermNames = {
   DONG_ZHI: '冬至', XIAO_HAN: '小寒', DA_HAN: '大寒', LI_CHUN: '立春',
@@ -50,6 +66,17 @@ const solarTermNames = {
 
 function unique(values) {
   return [...new Set(values.filter(Boolean))];
+}
+
+// 为农历日历筛选节日，并补上部分库版本没有内置的中元节。
+function calendarFestivals(solar, lunar) {
+  const inferred = lunar.getMonth() === 7 && lunar.getDay() === 15 ? ['中元节'] : [];
+  return unique([
+    ...solar.getFestivals(),
+    ...solar.getOtherFestivals(),
+    ...lunar.getFestivals(),
+    ...inferred
+  ]).filter((name) => calendarFestivalNames.has(name));
 }
 
 function solarParts(date) {
@@ -195,8 +222,11 @@ function collectLunarCalendarYear(year) {
     const dayEarthScore = Number(dayStemElement === '土') + Number(dayBranchElement === '土');
     const dominantCount = Math.max(...Object.values(elementCounts));
     const dominantElements = Object.entries(elementCounts).filter(([, count]) => count === dominantCount).map(([element]) => element);
-    const solarTerm = lunar.getJieQi();
-    const festivals = unique([...solar.getFestivals(), ...solar.getOtherFestivals(), ...lunar.getFestivals()]);
+    const solarTerm = solarTermNames[lunar.getJieQi()] ?? lunar.getJieQi();
+    const festivals = calendarFestivals(solar, lunar);
+    const priceRow = priceByDate.get(date);
+    const previousPrice = previousPriceByDate.get(date);
+    const returnPct = priceRow && previousPrice ? Number(((priceRow.price / previousPrice - 1) * 100).toFixed(4)) : null;
     let energyLabel = '平衡观察';
     if (dayMetalWaterScore && dayEarthScore) energyLabel = '金水 · 土并见';
     else if (dayMetalWaterScore === 2) energyLabel = '金水双强日';
@@ -204,6 +234,10 @@ function collectLunarCalendarYear(year) {
     else if (dayEarthScore) energyLabel = '土属性日';
     return {
       date,
+      price: priceRow?.price ?? null,
+      previousPrice,
+      returnPct,
+      priceAvailable: Boolean(priceRow),
       year,
       month: Number(date.slice(5, 7)),
       day: Number(date.slice(8, 10)),
@@ -268,6 +302,8 @@ function writeLunarCalendars(startYear, endYear) {
     startYear,
     endYear,
     years,
+    priceReference: 'BTC 日线来自 data/btc_daily.csv；本地构建可用 BTC_DAILY_CSV 指向外部参考文件',
+    eventPolicy: '仅保留二十四节气与主要节日；中元节按农历七月十五补充',
     calendar: '公历日期按 UTC 日界；农历与年月日柱由 lunar-javascript 计算；不推断时柱',
     verifiedSamples: ['2011-02-03', '2024-02-10', '2025-01-29', '2026-02-17']
   }));

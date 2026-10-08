@@ -43,6 +43,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     return tags.join('');
   }
 
+  // 价格显示使用美元收盘价；没有对应日线时明确标记为待同步。
+  function formatPrice(day) {
+    if (!day.priceAvailable || !Number.isFinite(day.price)) return '<span class="btc-missing">待同步</span>';
+    return `<span class="btc-price">$${day.price.toLocaleString('en-US', { maximumFractionDigits: 2 })}</span>`;
+  }
+
+  // 日涨跌基于上一条可用 BTC 日线收盘价，正值绿色、负值红色。
+  function formatReturn(day) {
+    if (!day.priceAvailable || !Number.isFinite(day.returnPct)) return '<span class="btc-missing">—</span>';
+    const value = `${day.returnPct > 0 ? '+' : ''}${day.returnPct.toFixed(2)}%`;
+    const tone = day.returnPct > 0 ? 'positive' : day.returnPct < 0 ? 'negative' : 'flat';
+    return `<span class="btc-return ${tone}">${value}</span>`;
+  }
+
   // 五行计数覆盖年、月、日三柱六个干支，并保持固定顺序便于横向比较。
   function renderElementCounts(counts) {
     return ['金', '水', '木', '火', '土'].map((element) => `<span class="element-count element-${element}">${element}${counts[element]}</span>`).join('');
@@ -72,12 +86,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     days.forEach((day) => {
       const lunarDate = day.lunarDay === 1 ? `${day.lunarMonthText}月初一` : day.lunarDayText;
       const events = [day.solarTerm, ...day.festivals].filter(Boolean);
-      cells.push(`<article class="full-lunar-day ${energyClass(day)}"><div class="lunar-day-head"><strong>${day.day}</strong><span>周${weekdays[day.weekday]}</span></div><div class="lunar-date">农历${lunarDate}</div><div class="pillar-stack"><span><b>年</b>${day.yearPillar}<em>${day.yearElements}</em></span><span><b>月</b>${day.monthPillar}<em>${day.monthElements}</em></span><span><b>日</b>${day.dayPillar}<em>${day.dayElements}</em></span></div><div class="day-energy-row">${energyTags(day)}<small>${day.energyLabel}</small></div>${events.length ? `<div class="lunar-events">${events.join(' · ')}</div>` : ''}</article>`);
+      cells.push(`<article class="full-lunar-day ${energyClass(day)}"><div class="lunar-day-head"><strong>${day.day}</strong><span>周${weekdays[day.weekday]}</span></div><div class="lunar-date">农历${lunarDate}</div><div class="pillar-stack"><span><b>年</b>${day.yearPillar}<em>${day.yearElements}</em></span><span><b>月</b>${day.monthPillar}<em>${day.monthElements}</em></span><span><b>日</b>${day.dayPillar}<em>${day.dayElements}</em></span></div><div class="day-energy-row">${energyTags(day)}<small>${day.energyLabel}</small></div><div class="btc-day-data">${formatPrice(day)} <span>(${formatReturn(day)})</span></div>${events.length ? `<div class="lunar-events">${events.join(' · ')}</div>` : ''}</article>`);
     });
     $('#full-lunar-grid').innerHTML = cells.join('');
     $('#lunar-detail-table').innerHTML = days.map((day) => {
       const events = [day.solarTerm, ...day.festivals].filter(Boolean).join(' · ') || '—';
-      return `<tr><td>${day.date} 周${weekdays[day.weekday]}</td><td>${day.lunarText}</td><td>${day.zodiac}</td><td>${day.yearPillar} · ${day.yearElements}</td><td>${day.monthPillar} · ${day.monthElements}</td><td class="${day.isEarthDay ? 'earth-text' : day.isMetalWaterDay ? 'metal-water-text' : ''}">${day.dayPillar} · ${day.dayElements}</td><td><div class="element-counts">${renderElementCounts(day.elementCounts)}</div></td><td><div class="table-energy">${energyTags(day)}<span>${day.energyLabel}</span></div></td><td>${events}</td></tr>`;
+      return `<tr><td>${day.date} 周${weekdays[day.weekday]}</td><td>${day.lunarText}</td><td>${day.zodiac}</td><td>${day.yearPillar} · ${day.yearElements}</td><td>${day.monthPillar} · ${day.monthElements}</td><td class="${day.isEarthDay ? 'earth-text' : day.isMetalWaterDay ? 'metal-water-text' : ''}">${day.dayPillar} · ${day.dayElements}</td><td><div class="element-counts">${renderElementCounts(day.elementCounts)}</div></td><td><div class="table-energy">${energyTags(day)}<span>${day.energyLabel}</span></div></td><td class="btc-table-cell">${formatPrice(day)}</td><td class="btc-table-cell">${formatReturn(day)}</td><td>${events}</td></tr>`;
     }).join('');
     const metalWaterDays = days.filter((day) => day.isMetalWaterDay).length;
     const earthDays = days.filter((day) => day.isEarthDay).length;
