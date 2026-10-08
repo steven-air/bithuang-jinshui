@@ -11,8 +11,9 @@
 - **土属性红色标记**：日干或日支为土的日期统一红色标识；2025-10-11 癸丑、2025-10-17 己未额外显示 `📌` 低点关注。
 - **金水日回测**：对比全样本、金水日、金水双强日的上涨率、平均回报和中位数。
 - **丁酉月周期**：展示 2011、2016、2021、2026 已覆盖样本，以及 2031、2036、2041 的未来节气窗口。
-- **历史节气与五行月柱**：提供独立页面 [`historical-terms.html`](https://steven-air.github.io/bithuang-jinshui/historical-terms.html)，按年份查看 2018—2026 年 216 条节气记录；主研究页也保留同一张表。
-- **未来节气五行**：单列当前日期后至 2042 年底的全部节气，展示北京时间、节气月柱、月干五行与月支五行；未来日期不填充价格。
+- **历史节气与五行月柱**：提供独立页面 [`historical-terms.html`](https://steven-air.github.io/bithuang-jinshui/historical-terms.html)，按年份查看 2011—2026 年 384 条节气记录；主研究页也保留同一张表。
+- **未来节气五行**：单列当前日期后至 2042 年底的全部节气，支持按年份筛选，展示北京时间、节气月柱、月干五行与月支五行；未来日期不填充价格。
+- **完整农历日历**：提供独立页面 [`lunar-calendar.html`](https://steven-air.github.io/bithuang-jinshui/lunar-calendar.html)，支持选择 2011—2042 年和月份，逐日展示公历、农历、生肖、年柱 / 月柱 / 日柱、六字五行计数、金水与土属性能量；金水用绿色、土属性用红色。每年数据拆分在 `data/lunar-calendar/`，闰月与节气由 `lunar-javascript` 直接计算。
 - **方法与来源**：公开 CSV、`lunar-javascript` API 链路和本地重建命令。
 
 ## 本地运行
@@ -37,7 +38,8 @@ python -m http.server 4174
 - 相邻收盘价的日回报、上涨率、平均值和中位数；
 - 2010-01-01 至 2042-12-31 的丁酉月节气日期窗口。
 - 当前日期后至 2042-12-31 的节气精确时刻与节气月柱五行表。
-- 2018-01-01 至 2026-12-31 的完整节气精确时刻与节气月柱五行表（每年 24 条）。
+- 2011-01-01 至 2026-12-31 的完整节气精确时刻与节气月柱五行表（每年 24 条）。
+- 2011-01-01 至 2042-12-31 的逐日农历 / 三柱 / 五行日历；构建时自动校对 2011、2024、2025、2026 春节正月初一。
 
 运行脚本会覆盖 `data/analysis.json`。原始 CSV 不会被修改。
 
@@ -48,6 +50,8 @@ python -m http.server 4174
 公开地址：<https://steven-air.github.io/bithuang-jinshui/>
 
 历史节气专页：<https://steven-air.github.io/bithuang-jinshui/historical-terms.html>
+
+农历日历专页：<https://steven-air.github.io/bithuang-jinshui/lunar-calendar.html>
 
 自动同步：GitHub Actions 每天 UTC 02:17 执行 `.github/workflows/sync-data.yml`；手动同步可在该工作流点击 **Run workflow**。本地同步后提交：
 

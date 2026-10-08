@@ -9,6 +9,7 @@ const csvPath = path.join(root, 'data', 'btc_daily.csv');
 const ohlcPath = path.join(root, 'data', 'btc_ohlc.csv');
 const outputPath = path.join(root, 'data', 'analysis.json');
 const syncMetaPath = path.join(root, 'data', 'sync-meta.json');
+const lunarCalendarDir = path.join(root, 'data', 'lunar-calendar');
 const raw = fs.readFileSync(csvPath, 'utf8').replace(/^\uFEFF/, '').trim();
 const rows = raw.split(/\r?\n/).slice(1).map((line) => {
   const [date, price] = line.split(',');
@@ -159,6 +160,120 @@ function localDateRange(start, end) {
   return dates;
 }
 
+// 把年、月、日三柱共六个干支统一拆成五行计数，供日历做每日能量对照。
+function countPillarElements(pillars) {
+  const counts = { 金: 0, 水: 0, 木: 0, 火: 0, 土: 0 };
+  pillars.forEach(({ gan, zhi }) => {
+    counts[ganElement[gan]] += 1;
+    counts[zhiElement[zhi]] += 1;
+  });
+  return counts;
+}
+
+// 生成一个公历年的每一天；农历文本、闰月、节气与三柱全部来自 lunar-javascript。
+function collectLunarCalendarYear(year) {
+  return localDateRange(`${year}-01-01`, `${year}-12-31`).map((date) => {
+    const solar = solarParts(date);
+    const lunar = solar.getLunar();
+    const eight = lunar.getEightChar();
+    const yearGan = eight.getYearGan();
+    const yearZhi = eight.getYearZhi();
+    const monthGan = eight.getMonthGan();
+    const monthZhi = eight.getMonthZhi();
+    const dayGan = eight.getDayGan();
+    const dayZhi = eight.getDayZhi();
+    const dayStemElement = ganElement[dayGan];
+    const dayBranchElement = zhiElement[dayZhi];
+    const elementCounts = countPillarElements([
+      { gan: yearGan, zhi: yearZhi },
+      { gan: monthGan, zhi: monthZhi },
+      { gan: dayGan, zhi: dayZhi }
+    ]);
+    const metalWaterScore = elementCounts.金 + elementCounts.水;
+    const earthScore = elementCounts.土;
+    const dayMetalWaterScore = Number(['金', '水'].includes(dayStemElement)) + Number(['金', '水'].includes(dayBranchElement));
+    const dayEarthScore = Number(dayStemElement === '土') + Number(dayBranchElement === '土');
+    const dominantCount = Math.max(...Object.values(elementCounts));
+    const dominantElements = Object.entries(elementCounts).filter(([, count]) => count === dominantCount).map(([element]) => element);
+    const solarTerm = lunar.getJieQi();
+    const festivals = unique([...solar.getFestivals(), ...solar.getOtherFestivals(), ...lunar.getFestivals()]);
+    let energyLabel = '平衡观察';
+    if (dayMetalWaterScore && dayEarthScore) energyLabel = '金水 · 土并见';
+    else if (dayMetalWaterScore === 2) energyLabel = '金水双强日';
+    else if (dayMetalWaterScore === 1) energyLabel = '金水属性日';
+    else if (dayEarthScore) energyLabel = '土属性日';
+    return {
+      date,
+      year,
+      month: Number(date.slice(5, 7)),
+      day: Number(date.slice(8, 10)),
+      weekday: new Date(`${date}T00:00:00Z`).getUTCDay(),
+      lunarText: lunar.toString(),
+      lunarYear: lunar.getYear(),
+      lunarMonth: lunar.getMonth(),
+      lunarDay: lunar.getDay(),
+      lunarYearText: lunar.getYearInChinese(),
+      lunarMonthText: lunar.getMonthInChinese(),
+      lunarDayText: lunar.getDayInChinese(),
+      zodiac: lunar.getYearShengXiao(),
+      yearPillar: `${yearGan}${yearZhi}`,
+      monthPillar: `${monthGan}${monthZhi}`,
+      dayPillar: `${dayGan}${dayZhi}`,
+      yearElements: `${ganElement[yearGan]} / ${zhiElement[yearZhi]}`,
+      monthElements: `${ganElement[monthGan]} / ${zhiElement[monthZhi]}`,
+      dayElements: `${dayStemElement} / ${dayBranchElement}`,
+      elementCounts,
+      metalWaterScore,
+      earthScore,
+      dayMetalWaterScore,
+      dayEarthScore,
+      isMetalWaterDay: dayMetalWaterScore > 0,
+      isEarthDay: dayEarthScore > 0,
+      dominantElements,
+      energyLabel,
+      solarTerm,
+      festivals
+    };
+  });
+}
+
+// 用已知春节日期校对农历转换，库升级或时区处理发生偏差时立即停止写出错误数据。
+function verifyLunarCalendar() {
+  const samples = [
+    ['2011-02-03', 2011, 1, 1],
+    ['2024-02-10', 2024, 1, 1],
+    ['2025-01-29', 2025, 1, 1],
+    ['2026-02-17', 2026, 1, 1]
+  ];
+  samples.forEach(([date, expectedYear, expectedMonth, expectedDay]) => {
+    const lunar = solarParts(date).getLunar();
+    if (lunar.getYear() !== expectedYear || lunar.getMonth() !== expectedMonth || lunar.getDay() !== expectedDay) {
+      throw new Error(`农历校对失败：${date} -> ${lunar.toString()}`);
+    }
+  });
+}
+
+// 日历按年拆分，页面只加载所选年份，避免一次下载三十多年的每日记录。
+function writeLunarCalendars(startYear, endYear) {
+  verifyLunarCalendar();
+  fs.mkdirSync(lunarCalendarDir, { recursive: true });
+  const years = [];
+  for (let year = startYear; year <= endYear; year += 1) {
+    const days = collectLunarCalendarYear(year);
+    fs.writeFileSync(path.join(lunarCalendarDir, `${year}.json`), JSON.stringify({ year, days }));
+    years.push(year);
+  }
+  fs.writeFileSync(path.join(lunarCalendarDir, 'index.json'), JSON.stringify({
+    generatedAt: new Date().toISOString(),
+    startYear,
+    endYear,
+    years,
+    calendar: '公历日期按 UTC 日界；农历与年月日柱由 lunar-javascript 计算；不推断时柱',
+    verifiedSamples: ['2011-02-03', '2024-02-10', '2025-01-29', '2026-02-17']
+  }));
+  return years.length;
+}
+
 // 按节气的精确时刻提取未来月柱，避免节气当天 0 点仍落在上一个月柱。
 function collectSolarTermForecast(start, end) {
   const terms = new Map();
@@ -239,8 +354,9 @@ const monthCalendar = localDateRange(monthStart, monthEnd).map((date) => dailyBy
 const nextDate = new Date(`${latest.date}T00:00:00Z`);
 nextDate.setUTCDate(nextDate.getUTCDate() + 1);
 const futureSolarTerms = collectSolarTermForecast(nextDate.toISOString().slice(0, 10), '2042-12-31');
-// 固定生成 2018—2026 年完整节气历史，页面可按年份筛选并复核月柱切换。
-const historicalSolarTerms = collectSolarTermForecast('2018-01-01', '2026-12-31');
+// 固定生成 2011—2026 年完整节气历史，页面可按年份筛选并复核月柱切换。
+const historicalSolarTerms = collectSolarTermForecast('2011-01-01', '2026-12-31');
+const lunarCalendarYears = writeLunarCalendars(2011, 2042);
 const syncMeta = fs.existsSync(syncMetaPath) ? JSON.parse(fs.readFileSync(syncMetaPath, 'utf8')) : {};
 
 const output = {
@@ -287,4 +403,4 @@ const output = {
 };
 
 fs.writeFileSync(outputPath, JSON.stringify(output));
-console.log(`生成 ${outputPath}: ${daily.length} 条日线，${dingYouMonths.length} 个丁酉月`);
+console.log(`生成 ${outputPath}: ${daily.length} 条日线，${dingYouMonths.length} 个丁酉月，${lunarCalendarYears} 年农历日历`);

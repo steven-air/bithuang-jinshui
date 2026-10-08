@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="2011—2042 公历、农历、年月日三柱与五行能量日历。">
+  <title>农历五行能量日历 · BTC 五行周期研究</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Noto+Serif+SC:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="index.html#overview" aria-label="回到研究首页"><span class="brand-mark"><span>₿</span></span><span class="brand-copy"><strong>BTC 五行周期研究</strong><small>BAZI × MARKET RESEARCH</small></span></a>
+      <div class="topbar-meta"><span class="status-dot"></span><span>完整农历资料页</span><span class="divider"></span><span id="calendar-range">2011 — 2042</span></div>
+      <div class="topbar-actions"><button class="icon-button" id="calendar-theme-toggle" type="button" title="切换显示模式" aria-label="切换显示模式"><i data-lucide="sun-moon"></i></button><a class="outline-button" href="historical-terms.html"><i data-lucide="calendar-days"></i><span>历史节气</span></a><a class="outline-button" href="index.html#calendar"><i data-lucide="layout-dashboard"></i><span>返回研究页</span></a></div>
+    </header>
+
+    <main class="main-content lunar-page">
+      <section class="section lunar-page-hero">
+        <div><div class="eyebrow"><span class="live-dot"></span>DAILY LUNAR ENERGY / YEAR · MONTH · DAY</div><h1>农历五行能量日历</h1><p class="hero-lede">按公历月查看每一天的准确农历日期、年柱、月柱、日柱与五行分布。金水属性以绿色标记，土属性以红色标记。</p></div>
+        <div class="lunar-method-note"><span>CALCULATION</span><strong>Solar → Lunar → EightChar</strong><p>采用日期级换算，不推断时柱；月柱在节气边界切换，不按农历初一切换。</p></div>
+      </section>
+
+      <section class="lunar-controls" aria-label="日历年月选择">
+        <div class="calendar-pager">
+          <button class="icon-button" id="previous-month" type="button" title="上一个月" aria-label="上一个月"><i data-lucide="chevron-left"></i></button>
+          <div class="lunar-selectors"><label for="lunar-year-select"><span>公历年份</span><select id="lunar-year-select"></select></label><label for="lunar-month-select"><span>月份</span><select id="lunar-month-select"></select></label></div>
+          <button class="icon-button" id="next-month" type="button" title="下一个月" aria-label="下一个月"><i data-lucide="chevron-right"></i></button>
+          <button class="outline-button compact-action" id="current-month" type="button"><i data-lucide="locate-fixed"></i><span>本月</span></button>
+        </div>
+        <div class="lunar-legend"><span><i class="legend-chip metal-water"></i>金水属性</span><span><i class="legend-chip earth"></i>土属性</span><span><i class="legend-chip mixed"></i>金水与土并见</span><span><i class="legend-chip neutral"></i>其他</span></div>
+      </section>
+
+      <section class="lunar-month-overview" aria-live="polite">
+        <div><span>当前月份</span><strong id="lunar-month-title">正在载入</strong></div>
+        <div><span>金水属性日</span><strong class="metal-water-text" id="metal-water-days">—</strong></div>
+        <div><span>土属性日</span><strong class="earth-text" id="earth-days">—</strong></div>
+        <div><span>节气</span><strong id="solar-term-days">—</strong></div>
+      </section>
+
+      <section class="full-lunar-calendar" aria-labelledby="lunar-month-title">
+        <div class="weekday-row"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+        <div class="full-lunar-grid" id="full-lunar-grid"><p class="calendar-loading">正在载入农历数据…</p></div>
+      </section>
+
+      <section class="lunar-detail-section">
+        <div class="card-toolbar"><div><span class="card-kicker">DAILY PILLARS & ELEMENTS</span><strong id="lunar-detail-title">每日年月日柱与五行</strong></div><span class="detail-note">年柱 / 月柱 / 日柱共六个干支</span></div>
+        <div class="table-scroll"><table class="data-table lunar-detail-table"><thead><tr><th>公历</th><th>农历</th><th>生肖</th><th>年柱 · 五行</th><th>月柱 · 五行</th><th>日柱 · 五行</th><th>六字五行计数</th><th>当日属性</th><th>节气 / 节日</th></tr></thead><tbody id="lunar-detail-table"></tbody></table></div>
+      </section>
+
+      <section class="calendar-audit-note"><i data-lucide="badge-check"></i><div><strong>农历校对</strong><p>构建数据时使用 2011、2024、2025、2026 四个春节正月初一作为自动校对样本。闰月由换算库直接返回，页面不会用固定月份表推算。</p></div><span id="calendar-generated-at">—</span></section>
+      <div class="footer-note standalone-footer"><span><a href="index.html#calendar">返回 BTC 五行周期研究</a></span><span>农历与三柱由 <strong>lunar-javascript</strong> 计算</span></div>
+    </main>
+  </div>
+  <div class="toast" id="calendar-toast" role="status" aria-live="polite"></div>
+  <script src="lunar-calendar.js"></script>
+</body>
+</html>
