@@ -48,11 +48,10 @@ const lowPointPins = new Map([
   ['2025-10-11', '癸丑日土属性，低点关注'],
   ['2025-10-17', '己未日土属性，低点关注']
 ]);
-const highlightedFestivals = new Set(['中秋节', '国庆节', '春节', '圣诞节']);
-// 日历只保留主要节日，过滤库内的纪念日、国际日和其他扩展节日。
+const highlightedFestivals = new Set(['春节', '清明节', '中元节', '中秋节', '国庆节', '圣诞节']);
+// 农历日历只显示用户指定的节日；二十四节气由 solarTerm 字段独立保留。
 const calendarFestivalNames = new Set([
-  '元旦节', '除夕', '春节', '元宵节', '清明节', '端午节', '七夕节',
-  '中元节', '中秋节', '重阳节', '国庆节', '劳动节', '圣诞节'
+  '春节', '清明节', '中元节', '中秋节', '国庆节', '圣诞节'
 ]);
 // lunar-javascript 的部分版本把冬至键名返回为英文内部标识，这里统一成页面展示用中文。
 const solarTermNames = {
@@ -71,12 +70,21 @@ function unique(values) {
 // 为农历日历筛选节日，并补上部分库版本没有内置的中元节。
 function calendarFestivals(solar, lunar) {
   const inferred = lunar.getMonth() === 7 && lunar.getDay() === 15 ? ['中元节'] : [];
+  // 清明节与清明节气同日，部分库版本只返回节气名，这里统一补齐节日标签。
+  const qingming = Object.values(lunar.getJieQiTable()).some((term) => term.toYmd() === solar.toYmd())
+    && lunar.getJieQi() === '清明' ? ['清明节'] : [];
   return unique([
     ...solar.getFestivals(),
     ...solar.getOtherFestivals(),
     ...lunar.getFestivals(),
+    ...qingming,
     ...inferred
   ]).filter((name) => calendarFestivalNames.has(name));
+}
+
+// 主分析数据也使用同一节日白名单，避免纪念日和国际日混入页面事件。
+function majorFestivals(solar, lunar) {
+  return calendarFestivals(solar, lunar);
 }
 
 function solarParts(date) {
@@ -104,9 +112,7 @@ function enrich(row, previous) {
     .filter(([, item]) => item.toYmd() === solar.toYmd())
     .map(([name]) => solarTermNames[name] ?? name);
   const festivals = unique([
-    ...solar.getFestivals(),
-    ...solar.getOtherFestivals(),
-    ...lunar.getFestivals(),
+    ...majorFestivals(solar, lunar),
     ...solarTerms.map((name) => `节气·${name}`)
   ]);
   const highlightEvents = unique([
@@ -303,7 +309,7 @@ function writeLunarCalendars(startYear, endYear) {
     endYear,
     years,
     priceReference: 'BTC 日线来自 data/btc_daily.csv；本地构建可用 BTC_DAILY_CSV 指向外部参考文件',
-    eventPolicy: '仅保留二十四节气与主要节日；中元节按农历七月十五补充',
+    eventPolicy: '仅保留二十四节气与春节、清明节、中元节、中秋节、国庆节、圣诞节；中元节按农历七月十五补充',
     calendar: '公历日期按 UTC 日界；农历与年月日柱由 lunar-javascript 计算；不推断时柱',
     verifiedSamples: ['2011-02-03', '2024-02-10', '2025-01-29', '2026-02-17']
   }));
