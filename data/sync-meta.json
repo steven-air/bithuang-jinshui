@@ -1,9 +1,9 @@
 {
-  "syncedAt": "2026-11-13T09:28:18.012Z",
+  "syncedAt": "2026-11-14T08:55:52.057Z",
   "closeSource": "https://www.btbjb.com/data/btc_daily.csv",
   "ohlcSource": "https://query1.finance.yahoo.com/v8/finance/chart/BTC-USD",
-  "previousLatestDate": "2026-11-13",
-  "latestCloseDate": "2026-11-13",
-  "latestOhlcDate": "2026-11-13",
+  "previousLatestDate": "2026-11-14",
+  "latestCloseDate": "2026-11-14",
+  "latestOhlcDate": "2026-11-14",
   "addedCloseRows": 0
 }
